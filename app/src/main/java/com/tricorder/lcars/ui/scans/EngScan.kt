@@ -16,11 +16,11 @@ import com.tricorder.lcars.ui.theme.LcarsColors
 import com.tricorder.lcars.ui.theme.LcarsType
 
 @Composable
-fun EngScan(s: TricorderState, active: Boolean) {
+fun EngScan(s: TricorderState, active: Boolean, onHoloTap: () -> Unit) {
     val b = s.battery
 
     SectionHeader("POWER CELL CORE", LcarsColors.Orange)
-    PowerCell(s, active, Modifier.fillMaxWidth().height(250.dp))
+    PowerCell(s, active, Modifier.fillMaxWidth().height(250.dp), onHoloTap)
 
     SectionHeader("POWER CELL RESERVE", LcarsColors.Yellow)
     Text(

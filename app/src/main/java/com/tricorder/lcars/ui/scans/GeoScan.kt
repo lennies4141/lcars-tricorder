@@ -20,9 +20,9 @@ import com.tricorder.lcars.ui.theme.LcarsColors
 import com.tricorder.lcars.ui.theme.LcarsType
 
 @Composable
-fun GeoScan(s: TricorderState, active: Boolean) {
+fun GeoScan(s: TricorderState, active: Boolean, onHoloTap: () -> Unit) {
     SectionHeader("GYRO-STABILIZED GEOSPHERE", LcarsColors.Orange)
-    GyroGlobe(s, active, Modifier.fillMaxWidth().aspectRatio(1f))
+    GyroGlobe(s, active, Modifier.fillMaxWidth().aspectRatio(1f), onHoloTap)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
         Text(s.headingDeg?.let { "%03d°".format(it.toInt()) } ?: "---°", style = LcarsType.BigReadout)
         Spacer(Modifier.weight(1f))

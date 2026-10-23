@@ -19,6 +19,7 @@ import com.tricorder.lcars.audio.SoundEngine
 import com.tricorder.lcars.sensors.TricorderState
 import com.tricorder.lcars.ui.scans.activity
 import com.tricorder.lcars.ui.scans.cardinal
+import com.tricorder.lcars.ui.scans.TrackerSim
 import com.tricorder.lcars.ui.scans.fieldClass
 import com.tricorder.lcars.ui.scans.lightClass
 import com.tricorder.lcars.ui.theme.LcarsColors
@@ -33,7 +34,22 @@ data class ScanReport(
 )
 
 /** Snapshot the live readings into a show-style analysis summary. */
-fun buildReport(sub: SubSystem, s: TricorderState): ScanReport = when (sub) {
+fun buildReport(sub: SubSystem, s: TricorderState, tracker: TrackerSim): ScanReport = when (sub) {
+    SubSystem.TRACKER -> {
+        val n = tracker.nearest()
+        val anomaly = n != null && n.range < 6f
+        ScanReport(
+            "MOTION TRACKER SWEEP",
+            listOf(
+                "SIGNALS" to "${tracker.contacts.size}",
+                "NEAREST" to (n?.let { "%.1f m".format(it.range) } ?: "NONE"),
+                "BEARING" to (n?.let { "%+.0f°".format(tracker.relBearing(it.bearing)) } ?: "--"),
+                "MOVEMENT" to (n?.let { if (it.pause > 0f) "HOLDING" else "CLOSING" } ?: "--"),
+            ),
+            if (anomaly) "MULTIPLE SIGNALS INSIDE PERIMETER" else "SIGNALS TRACKED // KEEP MOVING",
+            anomaly,
+        )
+    }
     SubSystem.GEO -> {
         val b = s.magField?.magnitude
         val anomaly = b != null && b > 150f
@@ -107,6 +123,7 @@ fun scanIntensity(sub: SubSystem, s: TricorderState): Float = when (sub) {
     SubSystem.METEO -> log10((s.lux ?: 10f).coerceAtLeast(1f)) / 5f
     SubSystem.BIO -> (s.linearAccel?.magnitude ?: 0f) / 3f
     SubSystem.ENG -> ((s.battery?.temperatureC ?: 25f) - 25f) / 20f
+    SubSystem.TRACKER -> 0f
 }.coerceIn(0f, 1f)
 
 fun voiceFor(sub: SubSystem): SoundEngine.Voice = when (sub) {
@@ -114,6 +131,7 @@ fun voiceFor(sub: SubSystem): SoundEngine.Voice = when (sub) {
     SubSystem.METEO -> SoundEngine.Voice.TRICORDER
     SubSystem.BIO -> SoundEngine.Voice.MEDICAL
     SubSystem.ENG -> SoundEngine.Voice.ENGINEERING
+    SubSystem.TRACKER -> SoundEngine.Voice.NONE
 }
 
 @Composable

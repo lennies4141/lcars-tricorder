@@ -63,6 +63,8 @@ import com.tricorder.lcars.ui.scans.BioScan
 import com.tricorder.lcars.ui.scans.EngScan
 import com.tricorder.lcars.ui.scans.GeoScan
 import com.tricorder.lcars.ui.scans.MeteoScan
+import com.tricorder.lcars.ui.scans.TrackerScan
+import com.tricorder.lcars.ui.scans.TrackerSim
 import com.tricorder.lcars.ui.theme.LcarsColors
 import com.tricorder.lcars.ui.theme.LcarsType
 import kotlinx.coroutines.Job
@@ -78,6 +80,7 @@ enum class SubSystem(val label: String, val code: String, val color: Color) {
     METEO("METEO-SCAN", "02-1138", LcarsColors.Periwinkle),
     BIO("BIO-SCAN", "03-7724", LcarsColors.Lilac),
     ENG("ENG-SCAN", "04-0047", LcarsColors.Yellow),
+    TRACKER("TRACKER", "05-2179", LcarsColors.Mint),
 }
 
 private val SIDEBAR = 112.dp
@@ -99,6 +102,8 @@ fun TricorderScreen(state: TricorderState, engine: SoundEngine) {
     val haptics = LocalHapticFeedback.current
     val latestState by rememberUpdatedState(state)
     val latestSub by rememberUpdatedState(current)
+    val tracker = remember { TrackerSim() }
+    val holoTap: () -> Unit = { engine.play(SoundEngine.Fx.PROBE) }
 
     val active = scanning || continuous
 
@@ -119,7 +124,7 @@ fun TricorderScreen(state: TricorderState, engine: SoundEngine) {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 progress.snapTo(0f)
                 progress.animateTo(1f, tween(SCAN_MS, easing = LinearEasing))
-                val r = buildReport(latestSub, latestState)
+                val r = buildReport(latestSub, latestState, tracker)
                 scanning = false
                 report = r
                 engine.play(if (r.anomaly) SoundEngine.Fx.ALERT else SoundEngine.Fx.SCAN_COMPLETE)
@@ -151,7 +156,7 @@ fun TricorderScreen(state: TricorderState, engine: SoundEngine) {
                             text = sub.label,
                             color = sub.color,
                             selected = sub == current,
-                            modifier = Modifier.height(60.dp),
+                            modifier = Modifier.height(54.dp),
                         ) {
                             if (current != sub) {
                                 current = sub
@@ -227,16 +232,17 @@ fun TricorderScreen(state: TricorderState, engine: SoundEngine) {
                             )
                             ScanSweep(sub.color)
                             when (sub) {
-                                SubSystem.GEO -> GeoScan(state, active)
-                                SubSystem.METEO -> MeteoScan(state, active)
-                                SubSystem.BIO -> BioScan(state, active)
-                                SubSystem.ENG -> EngScan(state, active)
+                                SubSystem.GEO -> GeoScan(state, active, holoTap)
+                                SubSystem.METEO -> MeteoScan(state, active, holoTap)
+                                SubSystem.BIO -> BioScan(state, active, holoTap)
+                                SubSystem.ENG -> EngScan(state, active, holoTap)
+                                SubSystem.TRACKER -> TrackerScan(state, tracker, engine, holoTap)
                             }
                             Spacer(Modifier.height(8.dp))
                         }
                     }
 
-                    if (active) ScanBeamOverlay(current.color, Modifier.matchParentSize())
+                    if (active && current != SubSystem.TRACKER) ScanBeamOverlay(current.color, Modifier.matchParentSize())
 
                     // Fully qualified: inside Row/Column scopes the bare call resolves to a scoped extension and fails to compile.
                     androidx.compose.animation.AnimatedVisibility(

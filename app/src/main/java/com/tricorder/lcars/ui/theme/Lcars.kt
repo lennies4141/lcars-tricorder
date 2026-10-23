@@ -23,6 +23,7 @@ object LcarsColors {
     val Periwinkle = Color(0xFF9999FF)
     val Blue = Color(0xFF5588FF)
     val Ice = Color(0xFF99CCFF)
+    val Mint = Color(0xFF66FFCC)
     val Red = Color(0xFFCC4444)
     val Text = Color(0xFFFFE6CC)
     val Dim = Color(0xFF665544)

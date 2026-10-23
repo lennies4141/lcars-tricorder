@@ -2,12 +2,21 @@ package com.tricorder.lcars.ui.holo
 
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -16,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.sin
 
 /** Minimal 3D point for wireframe holograms. */
@@ -146,4 +156,72 @@ fun lerpColor(a: Color, b: Color, f: Float): Color {
         blue = a.blue + (b.blue - a.blue) * x,
         alpha = a.alpha + (b.alpha - a.alpha) * x,
     )
+}
+
+/**
+ * Smoothly integrated phase: advances by speed × frame time, with the speed itself
+ * eased toward its target. Changing speed never makes the animation jump.
+ */
+@Composable
+fun rememberPhase(speed: Float, smoothing: Float = 3f): State<Float> {
+    val target by rememberUpdatedState(speed)
+    val phase = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        var last = withFrameNanos { it }
+        var cur = target
+        while (true) {
+            withFrameNanos { now ->
+                val dt = ((now - last) / 1_000_000_000f).coerceIn(0f, 0.1f)
+                last = now
+                cur += (target - cur) * (1f - exp(-smoothing * dt))
+                phase.floatValue += cur * dt
+            }
+        }
+    }
+    return phase
+}
+
+/**
+ * Interactive hologram surface: tap = expanding ripple + [onTap] callback,
+ * horizontal drag = manual yaw (passed to [onDraw]); vertical drags still scroll the page.
+ */
+@Composable
+fun HoloCanvas(
+    modifier: Modifier,
+    color: Color,
+    onTap: () -> Unit,
+    onDraw: DrawScope.(t: Float, dragYaw: Float) -> Unit,
+) {
+    val time = rememberHoloTime()
+    val yaw = remember { mutableFloatStateOf(0f) }
+    val ripples = remember { mutableStateListOf<Pair<Offset, Float>>() }
+    val tap by rememberUpdatedState(onTap)
+    Canvas(
+        modifier
+            .pointerInput(Unit) {
+                detectTapGestures { pos ->
+                    ripples.add(pos to time.value)
+                    if (ripples.size > 6) ripples.removeAt(0)
+                    tap()
+                }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures { change, dx ->
+                    change.consume()
+                    yaw.floatValue += dx * 0.008f
+                }
+            }
+    ) {
+        val t = time.value
+        onDraw(t, yaw.floatValue)
+        for ((pos, start) in ripples) {
+            val age = t - start
+            if (age in 0f..1.2f) {
+                val f = age / 1.2f
+                val r = size.minDimension * 0.55f * f
+                drawCircle(color.copy(alpha = (1f - f) * 0.9f), r, pos, style = Stroke(3f))
+                drawCircle(color.copy(alpha = (1f - f) * 0.4f), r * 0.6f, pos, style = Stroke(2f))
+            }
+        }
+    }
 }

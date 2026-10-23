@@ -17,9 +17,9 @@ import com.tricorder.lcars.ui.theme.LcarsType
 import kotlin.math.log10
 
 @Composable
-fun MeteoScan(s: TricorderState, active: Boolean) {
+fun MeteoScan(s: TricorderState, active: Boolean, onHoloTap: () -> Unit) {
     SectionHeader("TOPOGRAPHIC SURVEY", LcarsColors.Blue)
-    TerrainScan(s, active, Modifier.fillMaxWidth().height(230.dp))
+    TerrainScan(s, active, Modifier.fillMaxWidth().height(230.dp), onHoloTap)
     SectionHeader("ATMOSPHERIC PRESSURE", LcarsColors.Periwinkle)
     Text(s.pressureHpa?.fmt(2) ?: "-----.--", style = LcarsType.BigReadout.copy(color = LcarsColors.Ice))
     Readout("HECTOPASCAL", s.pressureHpa?.fmt(2), "hPa")

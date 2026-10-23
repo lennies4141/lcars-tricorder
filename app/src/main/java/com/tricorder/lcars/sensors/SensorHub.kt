@@ -124,7 +124,7 @@ class SensorHub(private val context: Context) : SensorEventListener {
         barometer?.let { sensorManager.registerListener(this, it, ui) }
         proximity?.let { sensorManager.registerListener(this, it, ui) }
         linearAccel?.let { sensorManager.registerListener(this, it, game) }
-        rotationVector?.let { sensorManager.registerListener(this, it, ui) }
+        rotationVector?.let { sensorManager.registerListener(this, it, game) }
 
         // Battery status is a sticky system broadcast: the register call returns
         // the latest value immediately, then the receiver fires on each change.

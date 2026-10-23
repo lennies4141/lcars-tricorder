@@ -19,9 +19,9 @@ import com.tricorder.lcars.ui.theme.LcarsColors
  * plus the proximity sensor as a contact detector.
  */
 @Composable
-fun BioScan(s: TricorderState, active: Boolean) {
+fun BioScan(s: TricorderState, active: Boolean, onHoloTap: () -> Unit) {
     SectionHeader("GENETIC SEQUENCER", LcarsColors.Lilac)
-    DnaHelix(s, active, Modifier.fillMaxWidth().height(150.dp))
+    DnaHelix(s, active, Modifier.fillMaxWidth().height(150.dp), onHoloTap)
     SectionHeader("KINETIC WATERFALL", LcarsColors.Purple)
     MotionWaterfall(s, Modifier.fillMaxWidth().height(190.dp))
     val m = s.linearAccel?.magnitude

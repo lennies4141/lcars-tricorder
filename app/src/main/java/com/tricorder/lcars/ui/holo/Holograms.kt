@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -24,6 +25,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 private val TAU = (2 * PI).toFloat()
+private const val ROW_MS = 110L
 
 // ════════════════════════════════════════════════════════════════════
 // GEO-SCAN: gyro-stabilized holographic globe.
@@ -32,10 +34,9 @@ private val TAU = (2 * PI).toFloat()
 // The magnetic field and gravity vectors are drawn live in the phone's frame.
 // ════════════════════════════════════════════════════════════════════
 @Composable
-fun GyroGlobe(state: TricorderState, active: Boolean, modifier: Modifier) {
-    val time = rememberHoloTime()
-    Canvas(modifier) {
-        val t = time.value
+fun GyroGlobe(state: TricorderState, active: Boolean, modifier: Modifier, onTap: () -> Unit = {}) {
+    val sweepPhase = rememberPhase(if (active) 0.9f else 0.25f)
+    HoloCanvas(modifier, LcarsColors.Orange, onTap) { t, _ ->
         val rot = state.rotation
         val proj = Projector(center, focal = size.minDimension * 1.15f, distance = 3.4f)
 
@@ -80,7 +81,7 @@ fun GyroGlobe(state: TricorderState, active: Boolean, modifier: Modifier) {
         }
 
         // Scanning ring sweeps pole to pole while scanning (slow idle sweep otherwise)
-        val sweep = ((t * if (active) 0.9f else 0.25f) % 1f) * 2f - 1f
+        val sweep = (sweepPhase.value % 1f) * 2f - 1f
         val sPhi = sweep * PI.toFloat() / 2f
         val scanRing = (0..48).map { i ->
             val th = i * TAU / 48f
@@ -152,12 +153,11 @@ private fun DrawScope.arrow(proj: Projector, tip: P3, color: androidx.compose.ui
 // Terrain relief scales with light level; the isobar plane rides on pressure.
 // ════════════════════════════════════════════════════════════════════
 @Composable
-fun TerrainScan(state: TricorderState, active: Boolean, modifier: Modifier) {
-    val time = rememberHoloTime()
-    Canvas(modifier) {
-        val t = time.value
+fun TerrainScan(state: TricorderState, active: Boolean, modifier: Modifier, onTap: () -> Unit = {}) {
+    val beamPhase = rememberPhase(if (active) 0.6f else 0.18f)
+    HoloCanvas(modifier, LcarsColors.Periwinkle, onTap) { t, dragYaw ->
         val proj = Projector(Offset(center.x, size.height * 0.55f), focal = size.width * 0.95f, distance = 3.6f)
-        val yaw = t * 0.22f
+        val yaw = t * 0.22f + dragYaw
         val pitch = 0.62f
         val n = 18
         val ext = 1.35f
@@ -177,7 +177,7 @@ fun TerrainScan(state: TricorderState, active: Boolean, modifier: Modifier) {
                 Triple(x, z, h(x, z))
             }
         }
-        val beamZ = -ext + 2 * ext * ((t * if (active) 0.6f else 0.18f) % 1f)
+        val beamZ = -ext + 2 * ext * (beamPhase.value % 1f)
 
         for (i in 0 until n) for (j in 0 until n) {
             val (x, z, y) = grid[i][j]
@@ -239,13 +239,14 @@ fun TerrainScan(state: TricorderState, active: Boolean, modifier: Modifier) {
 // BIO-SCAN: rotating DNA double helix (spin rate follows motion)
 // ════════════════════════════════════════════════════════════════════
 @Composable
-fun DnaHelix(state: TricorderState, active: Boolean, modifier: Modifier) {
-    val time = rememberHoloTime()
-    val motion by rememberUpdatedState(state.linearAccel?.magnitude ?: 0f)
-    Canvas(modifier) {
-        val t = time.value
+fun DnaHelix(state: TricorderState, active: Boolean, modifier: Modifier, onTap: () -> Unit = {}) {
+    val motion = (state.linearAccel?.magnitude ?: 0f).coerceIn(0f, 4f)
+    // Spin speed follows motion but is integrated + eased, so it never jumps.
+    val spinPhase = rememberPhase(0.9f + motion * 0.7f + if (active) 0.6f else 0f, smoothing = 1.5f)
+    val scanPhase = rememberPhase(if (active) 0.7f else 0f)
+    HoloCanvas(modifier, LcarsColors.Lilac, onTap) { t, dragYaw ->
         val proj = Projector(center, focal = size.width * 0.78f, distance = 3.4f)
-        val spin = t * (0.9f + motion.coerceIn(0f, 4f) * 0.9f)
+        val spin = spinPhase.value + dragYaw
         val n = 46
         val r = 0.62f
         val tilt = 0.25f
@@ -256,7 +257,7 @@ fun DnaHelix(state: TricorderState, active: Boolean, modifier: Modifier) {
         }
         val a = (0 until n).map { pt(it, 0f) }
         val b = (0 until n).map { pt(it, PI.toFloat()) }
-        val scanX = if (active) ((t * 0.7f) % 1f) * n else -100f
+        val scanX = if (active) (scanPhase.value % 1f) * n else -100f
         val pairs = listOf(LcarsColors.Lilac to LcarsColors.Ice, LcarsColors.Yellow to LcarsColors.Sunset)
         for (i in 0 until n step 2) {
             val (c1, c2) = pairs[(i / 2) % 2]
@@ -279,6 +280,8 @@ fun DnaHelix(state: TricorderState, active: Boolean, modifier: Modifier) {
 fun MotionWaterfall(state: TricorderState, modifier: Modifier) {
     val history by rememberUpdatedState(state.motionHistory)
     val rows = remember { mutableStateListOf<FloatArray>() }
+    val time = rememberHoloTime()
+    val lastRowAt = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         while (true) {
             val h = history
@@ -288,16 +291,19 @@ fun MotionWaterfall(state: TricorderState, modifier: Modifier) {
             }
             rows.add(0, row)
             if (rows.size > 26) rows.removeAt(rows.lastIndex)
-            delay(110)
+            lastRowAt.floatValue = time.value
+            delay(ROW_MS)
         }
     }
     Canvas(modifier) {
+        // Fractional scroll between row arrivals keeps the ridges gliding instead of stepping.
+        val frac = ((time.value - lastRowAt.floatValue) / (ROW_MS / 1000f)).coerceIn(0f, 1f)
         val proj = Projector(Offset(center.x, size.height * 0.62f), focal = size.width * 0.9f, distance = 3.4f)
         val scale = (rows.maxOfOrNull { r -> r.maxOrNull() ?: 0f } ?: 0f).coerceAtLeast(0.6f)
         // Back to front so nearer ridges occlude farther ones
         for (k in rows.indices.reversed()) {
             val row = rows[k]
-            val z = 0.9f - k * 0.075f
+            val z = 0.9f - (k + frac) * 0.075f
             val pts = row.indices.map { i ->
                 val x = -1.5f + 3f * i / (row.size - 1)
                 P3(x, -0.35f + row[i] / scale * 0.75f, z).rotX(0.55f)
@@ -328,17 +334,19 @@ fun MotionWaterfall(state: TricorderState, modifier: Modifier) {
 // plasma particles rise faster while charging, arcs flash when on power.
 // ════════════════════════════════════════════════════════════════════
 @Composable
-fun PowerCell(state: TricorderState, active: Boolean, modifier: Modifier) {
-    val time = rememberHoloTime()
-    Canvas(modifier) {
-        val t = time.value
+fun PowerCell(state: TricorderState, active: Boolean, modifier: Modifier, onTap: () -> Unit = {}) {
+    val bat = state.battery
+    val isCharging = bat?.status == "CHARGING" || bat?.powerSource?.let { it != "INTERNAL CELL" } == true
+    val yawPhase = rememberPhase(if (active) 1.2f else 0.45f)
+    val plasmaPhase = rememberPhase(if (isCharging) 0.55f else 0.18f)
+    HoloCanvas(modifier, LcarsColors.Yellow, onTap) { t, dragYaw ->
         val b = state.battery
         val level = ((b?.levelPercent ?: 0).coerceAtLeast(0)) / 100f
         val charging = b?.status == "CHARGING" || b?.powerSource?.let { it != "INTERNAL CELL" } == true
         val temp = b?.temperatureC ?: 30f
         val heat = lerpColor(LcarsColors.Ice, LcarsColors.Red, (temp - 25f) / 20f)
         val proj = Projector(center, focal = size.minDimension * 1.2f, distance = 3.5f)
-        val yaw = t * (if (active) 1.2f else 0.45f)
+        val yaw = yawPhase.value + dragYaw
         fun v(p: P3) = p.rotY(yaw).rotX(0.38f)
 
         val r = 0.62f
@@ -378,9 +386,8 @@ fun PowerCell(state: TricorderState, active: Boolean, modifier: Modifier) {
         holoPolyline(proj, surf, LcarsColors.Text, 3f)
 
         // Plasma particles
-        val speed = if (charging) 0.55f else 0.18f
         for (i in 0 until 22) {
-            val ph = ((t * speed + i / 22f) % 1f)
+            val ph = ((plasmaPhase.value + i / 22f) % 1f)
             val y = h0 + (fillY - h0) * ph
             val a = i * 2.39996f + t * 0.8f
             val rad = r * (0.25f + 0.6f * ((i * 0.37f) % 1f))
