@@ -6,38 +6,36 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.tricorder.lcars.audio.Chirper
+import com.tricorder.lcars.audio.SoundEngine
 import com.tricorder.lcars.sensors.SensorHub
 import com.tricorder.lcars.ui.TricorderScreen
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var sensorHub: SensorHub
-    private val chirper = Chirper()
+    private lateinit var engine: SoundEngine
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         sensorHub = SensorHub(applicationContext)
+        engine = SoundEngine()
 
         setContent {
             val state by sensorHub.state.collectAsStateWithLifecycle()
-            TricorderScreen(state = state, chirper = chirper)
+            TricorderScreen(state = state, engine = engine)
         }
     }
 
     override fun onResume() {
         super.onResume()
         sensorHub.start()
+        engine.start()
     }
 
     override fun onPause() {
+        engine.stop()
         sensorHub.stop()
         super.onPause()
-    }
-
-    override fun onDestroy() {
-        chirper.release()
-        super.onDestroy()
     }
 }

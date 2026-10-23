@@ -59,6 +59,8 @@ data class TricorderState(
     val headingDeg: Float? = null,
     val pitchDeg: Float? = null,
     val rollDeg: Float? = null,
+    /** Row-major 3x3 device→world rotation matrix (world: X east, Y north, Z up). */
+    val rotation: FloatArray? = null,
     val battery: BatteryInfo? = null,
 )
 
@@ -196,7 +198,8 @@ class SensorHub(private val context: Context) : SensorEventListener {
         val azimuth = (Math.toDegrees(orientation[0].toDouble()).toFloat() + 360f) % 360f
         val pitch = Math.toDegrees(orientation[1].toDouble()).toFloat()
         val roll = Math.toDegrees(orientation[2].toDouble()).toFloat()
-        _state.update { it.copy(headingDeg = azimuth, pitchDeg = pitch, rollDeg = roll) }
+        val rot = rotationMatrix.copyOf()
+        _state.update { it.copy(headingDeg = azimuth, pitchDeg = pitch, rollDeg = roll, rotation = rot) }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
