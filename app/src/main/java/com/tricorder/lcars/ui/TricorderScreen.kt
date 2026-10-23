@@ -1,7 +1,6 @@
 package com.tricorder.lcars.ui
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -239,7 +238,8 @@ fun TricorderScreen(state: TricorderState, engine: SoundEngine) {
 
                     if (active) ScanBeamOverlay(current.color, Modifier.matchParentSize())
 
-                    AnimatedVisibility(
+                    // Fully qualified: inside Row/Column scopes the bare call resolves to a scoped extension and fails to compile.
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = report != null,
                         enter = fadeIn() + scaleIn(initialScale = 0.92f),
                         exit = fadeOut(),
