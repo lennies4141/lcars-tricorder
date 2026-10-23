@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LCARS elbow + pills icon. 108dp canvas, art kept inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Orange elbow: top bar + left column with rounded outer corner -->
+    <path
+        android:fillColor="#FF9900"
+        android:pathData="M48,30 L78,30 L78,40 L42,40 Q36,40 36,46 L36,52 L26,52 L26,46 Q26,30 42,30 Z" />
+    <!-- Purple pill -->
+    <path
+        android:fillColor="#CC99CC"
+        android:pathData="M26,56 L36,56 L36,66 L26,66 Z" />
+    <!-- Blue pill -->
+    <path
+        android:fillColor="#9999FF"
+        android:pathData="M26,70 L36,70 L36,78 L26,78 Z" />
+    <!-- Yellow readout bars -->
+    <path
+        android:fillColor="#FFCC66"
+        android:pathData="M44,48 L74,48 Q78,48 78,52 Q78,56 74,56 L44,56 Z" />
+    <path
+        android:fillColor="#FF7755"
+        android:pathData="M44,62 L64,62 Q68,62 68,66 Q68,70 64,70 L44,70 Z" />
+    <path
+        android:fillColor="#99CCFF"
+        android:pathData="M44,74 L70,74 Q74,74 74,76 Q74,78 70,78 L44,78 Z" />
+</vector>
