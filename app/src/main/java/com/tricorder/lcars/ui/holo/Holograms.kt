@@ -23,7 +23,7 @@ import kotlin.math.log10
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private const val TAU = (2 * PI).toFloat()
+private val TAU = (2 * PI).toFloat()
 
 // ════════════════════════════════════════════════════════════════════
 // GEO-SCAN: gyro-stabilized holographic globe.

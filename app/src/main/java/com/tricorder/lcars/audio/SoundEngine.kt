@@ -117,7 +117,7 @@ class SoundEngine {
                 }
                 track.write(out, 0, BLOCK)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             // Audio device lost: fail silently, the UI keeps working.
         } finally {
             runCatching { track.stop() }
